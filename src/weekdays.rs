@@ -503,6 +503,12 @@ impl Not for WeekdaySet {
     }
 }
 
+impl From<Weekday> for WeekdaySet {
+    fn from(weekday: Weekday) -> Self {
+        Self::single(weekday)
+    }
+}
+
 impl Extend<Weekday> for WeekdaySet {
     fn extend<T: IntoIterator<Item = Weekday>>(&mut self, iter: T) {
         for weekday in iter {
@@ -542,7 +548,7 @@ impl Not for Weekday {
     type Output = WeekdaySet;
 
     fn not(self) -> Self::Output {
-        !WeekdaySet::single(self)
+        !WeekdaySet::from(self)
     }
 }
 
