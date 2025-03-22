@@ -136,7 +136,26 @@ impl WeekdaySet {
     /// Convert the collection into a `Vec<Weekday>`.
     #[cfg(feature = "std")]
     pub fn to_vec(self) -> Vec<Weekday> {
-        self.iter_from(Weekday::Mon).collect()
+        self.iter().collect()
+    }
+
+    /// Iterate over the `Weekday`s in the collection.
+    ///
+    /// Starting from Monday, in ascending order.
+    ///
+    /// # Example
+    /// ```
+    /// # use chrono::WeekdaySet;
+    /// use chrono::Weekday::*;
+    /// let weekdays = WeekdaySet::from_iter([Mon, Wed, Fri]);
+    /// let mut iter = weekdays.iter();
+    /// assert_eq!(iter.next(), Some(Mon));
+    /// assert_eq!(iter.next(), Some(Wed));
+    /// assert_eq!(iter.next(), Some(Fri));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub const fn iter(self) -> WeekdaySetIter {
+        WeekdaySetIter(self)
     }
 
     /// Get the first day in the collection, starting from Monday.
@@ -416,6 +435,46 @@ impl Debug for WeekdaySet {
     }
 }
 
+/// An iterator over a collection of weekdays.
+///
+/// See `WeekdaySet::iter`.
+#[derive(Debug, Clone)]
+pub struct WeekdaySetIter(pub WeekdaySet);
+
+impl Iterator for WeekdaySetIter {
+    type Item = Weekday;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0.is_empty() {
+            return None;
+        }
+
+        let next = self.0.first().expect("the collection is not empty");
+        self.0.remove(next);
+        Some(next)
+    }
+}
+
+impl DoubleEndedIterator for WeekdaySetIter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.0.is_empty() {
+            return None;
+        }
+
+        let next_back = self.0.last().expect("the collection is not empty");
+        self.0.remove(next_back);
+        Some(next_back)
+    }
+}
+
+impl ExactSizeIterator for WeekdaySetIter {
+    fn len(&self) -> usize {
+        self.0.len().into()
+    }
+}
+
+impl FusedIterator for WeekdaySetIter {}
+
 /// An iterator over a collection of weekdays, starting from a given day.
 ///
 /// See `WeekdaySet::iter_from`.
@@ -484,7 +543,7 @@ impl FusedIterator for WeekdaySetIterFrom {}
 impl fmt::Display for WeekdaySet {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "[")?;
-        let mut iter = self.iter_from(Weekday::Mon);
+        let mut iter = self.iter();
         if let Some(first) = iter.next() {
             write!(f, "{first}")?;
         }
@@ -522,6 +581,15 @@ impl FromIterator<Weekday> for WeekdaySet {
         let mut weekdays = Self::EMPTY;
         weekdays.extend(iter);
         weekdays
+    }
+}
+
+impl IntoIterator for WeekdaySet {
+    type Item = Weekday;
+    type IntoIter = WeekdaySetIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
