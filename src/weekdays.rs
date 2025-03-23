@@ -56,6 +56,20 @@ impl WeekdaySet {
         self.intersection(other).0 == self.0
     }
 
+    /// Returns `true` if `self` contains all days in `other`.
+    ///
+    /// # Example
+    /// ```
+    /// # use chrono::WeekdaySet;
+    /// use chrono::Weekday::*;
+    /// assert!(WeekdaySet::ALL.is_superset(WeekdaySet::single(Mon)));
+    /// assert!(WeekdaySet::single(Mon).is_superset(WeekdaySet::EMPTY));
+    /// assert!(!WeekdaySet::single(Mon).is_superset(WeekdaySet::single(Tue)));
+    /// ```
+    pub const fn is_superset(self, other: Self) -> bool {
+        self.intersection(other).0 == other.0
+    }
+
     /// Adds a day to the collection.
     ///
     /// Returns `true` if the day was new to the collection.
