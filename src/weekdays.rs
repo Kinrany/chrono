@@ -1,7 +1,7 @@
 use core::{
     fmt::{self, Debug},
     iter::FusedIterator,
-    ops::{Index, Not},
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Index, Not},
 };
 
 use crate::Weekday;
@@ -554,6 +554,50 @@ impl fmt::Display for WeekdaySet {
     }
 }
 
+// impl Bit* for WeekdaySet
+impl BitOr for WeekdaySet {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        self.union(rhs)
+    }
+}
+
+impl BitAnd for WeekdaySet {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        self.intersection(rhs)
+    }
+}
+
+impl BitXor for WeekdaySet {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        self.symmetric_difference(rhs)
+    }
+}
+
+// impl Bit*Assign for WeekdaySet
+impl BitOrAssign for WeekdaySet {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl BitAndAssign for WeekdaySet {
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0;
+    }
+}
+
+impl BitXorAssign for WeekdaySet {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 ^= rhs.0;
+    }
+}
+
 impl Not for WeekdaySet {
     type Output = Self;
 
@@ -593,6 +637,31 @@ impl IntoIterator for WeekdaySet {
     }
 }
 
+// impl Bit*<Weekday> for WeekdaySet
+impl BitOr<Weekday> for WeekdaySet {
+    type Output = Self;
+
+    fn bitor(self, rhs: Weekday) -> Self::Output {
+        self | Self::from(rhs)
+    }
+}
+
+impl BitAnd<Weekday> for WeekdaySet {
+    type Output = Self;
+
+    fn bitand(self, rhs: Weekday) -> Self::Output {
+        self & Self::from(rhs)
+    }
+}
+
+impl BitXor<Weekday> for WeekdaySet {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Weekday) -> Self::Output {
+        self ^ Self::from(rhs)
+    }
+}
+
 /// Can be used to check the presence of a day in the collection.
 ///
 /// # Example
@@ -609,6 +678,75 @@ impl Index<Weekday> for WeekdaySet {
 
     fn index(&self, weekday: Weekday) -> &Self::Output {
         if self.contains(weekday) { &true } else { &false }
+    }
+}
+
+// impl Bit*<WeekdaySet> for Weekday
+impl BitOr<WeekdaySet> for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitor(self, rhs: WeekdaySet) -> Self::Output {
+        WeekdaySet::from(self) | rhs
+    }
+}
+
+impl BitAnd<WeekdaySet> for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitand(self, rhs: WeekdaySet) -> Self::Output {
+        WeekdaySet::from(self) & rhs
+    }
+}
+
+impl BitXor<WeekdaySet> for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitxor(self, rhs: WeekdaySet) -> Self::Output {
+        WeekdaySet::from(self) ^ rhs
+    }
+}
+
+// impl Bit*Assign<Weekday> for WeekdaySet
+impl BitOrAssign<Weekday> for WeekdaySet {
+    fn bitor_assign(&mut self, rhs: Weekday) {
+        *self |= Self::from(rhs);
+    }
+}
+
+impl BitAndAssign<Weekday> for WeekdaySet {
+    fn bitand_assign(&mut self, rhs: Weekday) {
+        *self &= Self::from(rhs);
+    }
+}
+
+impl BitXorAssign<Weekday> for WeekdaySet {
+    fn bitxor_assign(&mut self, rhs: Weekday) {
+        *self ^= Self::from(rhs);
+    }
+}
+
+// impl Bit* for Weekday
+impl BitOr for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        WeekdaySet::from(self) | WeekdaySet::from(rhs)
+    }
+}
+
+impl BitAnd for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        WeekdaySet::from(self) & WeekdaySet::from(rhs)
+    }
+}
+
+impl BitXor for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        WeekdaySet::from(self) ^ WeekdaySet::from(rhs)
     }
 }
 
