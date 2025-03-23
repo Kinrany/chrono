@@ -441,9 +441,19 @@ impl Not for WeekdaySet {
     }
 }
 
+impl Extend<Weekday> for WeekdaySet {
+    fn extend<T: IntoIterator<Item = Weekday>>(&mut self, iter: T) {
+        for weekday in iter {
+            self.insert(weekday);
+        }
+    }
+}
+
 impl FromIterator<Weekday> for WeekdaySet {
     fn from_iter<T: IntoIterator<Item = Weekday>>(iter: T) -> Self {
-        iter.into_iter().map(Self::single).fold(Self::EMPTY, Self::union)
+        let mut weekdays = Self::EMPTY;
+        weekdays.extend(iter);
+        weekdays
     }
 }
 
