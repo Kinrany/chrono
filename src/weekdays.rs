@@ -16,6 +16,27 @@ use crate::Weekday;
 pub struct WeekdaySet(u8); // Invariant: the 8-th bit is always 0.
 
 impl WeekdaySet {
+    /// Create a `WeekdaySet` from a bitmask.
+    ///
+    /// If present, the 8-th bit is ignored.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use chrono::WeekdaySet;
+    /// use chrono::Weekday::*;
+    /// assert_eq!(WeekdaySet::EMPTY, WeekdaySet::from_bits_truncate(0));
+    /// assert_eq!(WeekdaySet::single(Mon), WeekdaySet::from_bits_truncate(0b1));
+    /// assert_eq!(WeekdaySet::single(Tue), WeekdaySet::from_bits_truncate(0b10));
+    /// assert_eq!(WeekdaySet::from_array([Mon, Wed]), WeekdaySet::from_bits_truncate(0b101));
+    /// assert_eq!(WeekdaySet::ALL, WeekdaySet::from_bits_truncate(0b111_1111));
+    /// assert_eq!(WeekdaySet::single(Mon), WeekdaySet::from_bits_truncate(0b1000_0001));
+    /// ```
+    #[must_use]
+    pub const fn from_bits_truncate(bits: u8) -> Self {
+        Self(bits & 0b111_1111)
+    }
+
     /// Returns `Some(day)` if this collection contains exactly one day.
     ///
     /// Returns `None` otherwise.
