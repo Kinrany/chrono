@@ -184,6 +184,20 @@ impl WeekdaySet {
         WeekdaySetIterFrom { days: self, start }
     }
 
+    /// Returns the collection with all days inverted.
+    ///
+    /// # Example
+    /// ```
+    /// # use chrono::WeekdaySet;
+    /// use chrono::Weekday::*;
+    /// assert_eq!(WeekdaySet::single(Mon).inverse(), WeekdaySet::from_array([Tue, Wed, Thu, Fri, Sat, Sun]));
+    /// assert_eq!(WeekdaySet::ALL.inverse(), WeekdaySet::EMPTY);
+    /// assert_eq!(WeekdaySet::EMPTY.inverse(), WeekdaySet::ALL);
+    /// ```
+    pub const fn inverse(self) -> Self {
+        Self(self.0 ^ 0b0111_1111)
+    }
+
     /// Returns days that are in both `self` and `other`.
     ///
     /// # Example
@@ -423,7 +437,7 @@ impl Not for WeekdaySet {
     type Output = Self;
 
     fn not(self) -> Self::Output {
-        Self(self.0 ^ 0b0111_1111)
+        self.inverse()
     }
 }
 
