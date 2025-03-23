@@ -1,7 +1,7 @@
 use core::{
     fmt::{self, Debug},
     iter::FusedIterator,
-    ops::Not,
+    ops::{Index, Not},
 };
 
 use crate::Weekday;
@@ -444,6 +444,25 @@ impl Not for WeekdaySet {
 impl FromIterator<Weekday> for WeekdaySet {
     fn from_iter<T: IntoIterator<Item = Weekday>>(iter: T) -> Self {
         iter.into_iter().map(Self::single).fold(Self::EMPTY, Self::union)
+    }
+}
+
+/// Can be used to check the presence of a day in the collection.
+///
+/// # Example
+/// ```
+/// # use chrono::WeekdaySet;
+/// use chrono::Weekday::*;
+/// assert!(WeekdaySet::single(Mon)[Mon]);
+/// assert!(WeekdaySet::ALL[Mon]);
+/// assert!(!WeekdaySet::EMPTY[Mon]);
+/// assert!(!WeekdaySet::single(Tue)[Mon]);
+/// ```
+impl Index<Weekday> for WeekdaySet {
+    type Output = bool;
+
+    fn index(&self, weekday: Weekday) -> &Self::Output {
+        if self.contains(weekday) { &true } else { &false }
     }
 }
 
