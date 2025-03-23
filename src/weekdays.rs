@@ -98,6 +98,12 @@ impl WeekdaySet {
         false
     }
 
+    /// Convert the collection into a `Vec<Weekday>`.
+    #[cfg(feature = "std")]
+    pub fn to_vec(self) -> Vec<Weekday> {
+        self.iter_from(Weekday::Mon).collect()
+    }
+
     /// Get the first day in the collection, starting from Monday.
     ///
     /// Returns `None` if the collection is empty.
