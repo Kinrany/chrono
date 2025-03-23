@@ -1,7 +1,7 @@
 use core::{
     fmt::{self, Debug},
     iter::FusedIterator,
-    ops::Not,
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Index, Not},
 };
 
 use crate::Weekday;
@@ -16,6 +16,27 @@ use crate::Weekday;
 pub struct WeekdaySet(u8); // Invariant: the 8-th bit is always 0.
 
 impl WeekdaySet {
+    /// Create a `WeekdaySet` from a bitmask.
+    ///
+    /// If present, the 8-th bit is ignored.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use chrono::WeekdaySet;
+    /// use chrono::Weekday::*;
+    /// assert_eq!(WeekdaySet::EMPTY, WeekdaySet::from_bits_truncate(0));
+    /// assert_eq!(WeekdaySet::single(Mon), WeekdaySet::from_bits_truncate(0b1));
+    /// assert_eq!(WeekdaySet::single(Tue), WeekdaySet::from_bits_truncate(0b10));
+    /// assert_eq!(WeekdaySet::from_array([Mon, Wed]), WeekdaySet::from_bits_truncate(0b101));
+    /// assert_eq!(WeekdaySet::ALL, WeekdaySet::from_bits_truncate(0b111_1111));
+    /// assert_eq!(WeekdaySet::single(Mon), WeekdaySet::from_bits_truncate(0b1000_0001));
+    /// ```
+    #[must_use]
+    pub const fn from_bits_truncate(bits: u8) -> Self {
+        Self(bits & 0b111_1111)
+    }
+
     /// Returns `Some(day)` if this collection contains exactly one day.
     ///
     /// Returns `None` otherwise.
@@ -31,13 +52,13 @@ impl WeekdaySet {
     /// ```
     pub const fn single_day(self) -> Option<Weekday> {
         match self {
-            Self(0b000_0001) => Some(Weekday::Mon),
-            Self(0b000_0010) => Some(Weekday::Tue),
-            Self(0b000_0100) => Some(Weekday::Wed),
-            Self(0b000_1000) => Some(Weekday::Thu),
-            Self(0b001_0000) => Some(Weekday::Fri),
-            Self(0b010_0000) => Some(Weekday::Sat),
-            Self(0b100_0000) => Some(Weekday::Sun),
+            Self::MON => Some(Weekday::Mon),
+            Self::TUE => Some(Weekday::Tue),
+            Self::WED => Some(Weekday::Wed),
+            Self::THU => Some(Weekday::Thu),
+            Self::FRI => Some(Weekday::Fri),
+            Self::SAT => Some(Weekday::Sat),
+            Self::SUN => Some(Weekday::Sun),
             _ => None,
         }
     }
@@ -54,6 +75,20 @@ impl WeekdaySet {
     /// ```
     pub const fn is_subset(self, other: Self) -> bool {
         self.intersection(other).0 == self.0
+    }
+
+    /// Returns `true` if `self` contains all days in `other`.
+    ///
+    /// # Example
+    /// ```
+    /// # use chrono::WeekdaySet;
+    /// use chrono::Weekday::*;
+    /// assert!(WeekdaySet::ALL.is_superset(WeekdaySet::single(Mon)));
+    /// assert!(WeekdaySet::single(Mon).is_superset(WeekdaySet::EMPTY));
+    /// assert!(!WeekdaySet::single(Mon).is_superset(WeekdaySet::single(Tue)));
+    /// ```
+    pub const fn is_superset(self, other: Self) -> bool {
+        self.intersection(other).0 == other.0
     }
 
     /// Adds a day to the collection.
@@ -96,6 +131,31 @@ impl WeekdaySet {
         }
 
         false
+    }
+
+    /// Convert the collection into a `Vec<Weekday>`.
+    #[cfg(feature = "std")]
+    pub fn to_vec(self) -> Vec<Weekday> {
+        self.iter().collect()
+    }
+
+    /// Iterate over the `Weekday`s in the collection.
+    ///
+    /// Starting from Monday, in ascending order.
+    ///
+    /// # Example
+    /// ```
+    /// # use chrono::WeekdaySet;
+    /// use chrono::Weekday::*;
+    /// let weekdays = WeekdaySet::from_iter([Mon, Wed, Fri]);
+    /// let mut iter = weekdays.iter();
+    /// assert_eq!(iter.next(), Some(Mon));
+    /// assert_eq!(iter.next(), Some(Wed));
+    /// assert_eq!(iter.next(), Some(Fri));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub const fn iter(self) -> WeekdaySetIter {
+        WeekdaySetIter(self)
     }
 
     /// Get the first day in the collection, starting from Monday.
@@ -182,6 +242,20 @@ impl WeekdaySet {
     /// ```
     pub const fn iter_from(self, start: Weekday) -> WeekdaySetIterFrom {
         WeekdaySetIterFrom { days: self, start }
+    }
+
+    /// Returns the collection with all days inverted.
+    ///
+    /// # Example
+    /// ```
+    /// # use chrono::WeekdaySet;
+    /// use chrono::Weekday::*;
+    /// assert_eq!(WeekdaySet::single(Mon).inverse(), WeekdaySet::from_array([Tue, Wed, Thu, Fri, Sat, Sun]));
+    /// assert_eq!(WeekdaySet::ALL.inverse(), WeekdaySet::EMPTY);
+    /// assert_eq!(WeekdaySet::EMPTY.inverse(), WeekdaySet::ALL);
+    /// ```
+    pub const fn inverse(self) -> Self {
+        Self(self.0 ^ 0b0111_1111)
     }
 
     /// Returns days that are in both `self` and `other`.
@@ -286,15 +360,21 @@ impl WeekdaySet {
     }
 
     /// Create a `WeekdaySet` from a single `Weekday`.
+    ///
+    /// # Example
+    /// ```
+    /// # use chrono::{Weekday, WeekdaySet};
+    /// assert_eq!(WeekdaySet::MON, WeekdaySet::single(Weekday::Mon));
+    /// ```
     pub const fn single(weekday: Weekday) -> Self {
         match weekday {
-            Weekday::Mon => Self(0b000_0001),
-            Weekday::Tue => Self(0b000_0010),
-            Weekday::Wed => Self(0b000_0100),
-            Weekday::Thu => Self(0b000_1000),
-            Weekday::Fri => Self(0b001_0000),
-            Weekday::Sat => Self(0b010_0000),
-            Weekday::Sun => Self(0b100_0000),
+            Weekday::Mon => Self::MON,
+            Weekday::Tue => Self::TUE,
+            Weekday::Wed => Self::WED,
+            Weekday::Thu => Self::THU,
+            Weekday::Fri => Self::FRI,
+            Weekday::Sat => Self::SAT,
+            Weekday::Sun => Self::SUN,
         }
     }
 
@@ -322,6 +402,21 @@ impl WeekdaySet {
     pub const EMPTY: Self = Self(0b000_0000);
     /// A `WeekdaySet` containing all seven `Weekday`s.
     pub const ALL: Self = Self(0b111_1111);
+
+    /// A `WeekdaySet` containing only Monday.
+    pub const MON: Self = Self(0b000_0001);
+    /// A `WeekdaySet` containing only Tuesday.
+    pub const TUE: Self = Self(0b000_0010);
+    /// A `WeekdaySet` containing only Wednesday.
+    pub const WED: Self = Self(0b000_0100);
+    /// A `WeekdaySet` containing only Thursday.
+    pub const THU: Self = Self(0b000_1000);
+    /// A `WeekdaySet` containing only Friday.
+    pub const FRI: Self = Self(0b001_0000);
+    /// A `WeekdaySet` containing only Saturday.
+    pub const SAT: Self = Self(0b010_0000);
+    /// A `WeekdaySet` containing only Sunday.
+    pub const SUN: Self = Self(0b100_0000);
 }
 
 /// Print the underlying bitmask, padded to 7 bits.
@@ -339,6 +434,46 @@ impl Debug for WeekdaySet {
         write!(f, "WeekdaySet({:0>7b})", self.0)
     }
 }
+
+/// An iterator over a collection of weekdays.
+///
+/// See `WeekdaySet::iter`.
+#[derive(Debug, Clone)]
+pub struct WeekdaySetIter(pub WeekdaySet);
+
+impl Iterator for WeekdaySetIter {
+    type Item = Weekday;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0.is_empty() {
+            return None;
+        }
+
+        let next = self.0.first().expect("the collection is not empty");
+        self.0.remove(next);
+        Some(next)
+    }
+}
+
+impl DoubleEndedIterator for WeekdaySetIter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.0.is_empty() {
+            return None;
+        }
+
+        let next_back = self.0.last().expect("the collection is not empty");
+        self.0.remove(next_back);
+        Some(next_back)
+    }
+}
+
+impl ExactSizeIterator for WeekdaySetIter {
+    fn len(&self) -> usize {
+        self.0.len().into()
+    }
+}
+
+impl FusedIterator for WeekdaySetIter {}
 
 /// An iterator over a collection of weekdays, starting from a given day.
 ///
@@ -408,7 +543,7 @@ impl FusedIterator for WeekdaySetIterFrom {}
 impl fmt::Display for WeekdaySet {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "[")?;
-        let mut iter = self.iter_from(Weekday::Mon);
+        let mut iter = self.iter();
         if let Some(first) = iter.next() {
             write!(f, "{first}")?;
         }
@@ -419,17 +554,199 @@ impl fmt::Display for WeekdaySet {
     }
 }
 
+// impl Bit* for WeekdaySet
+impl BitOr for WeekdaySet {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        self.union(rhs)
+    }
+}
+
+impl BitAnd for WeekdaySet {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        self.intersection(rhs)
+    }
+}
+
+impl BitXor for WeekdaySet {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        self.symmetric_difference(rhs)
+    }
+}
+
+// impl Bit*Assign for WeekdaySet
+impl BitOrAssign for WeekdaySet {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl BitAndAssign for WeekdaySet {
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0;
+    }
+}
+
+impl BitXorAssign for WeekdaySet {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 ^= rhs.0;
+    }
+}
+
 impl Not for WeekdaySet {
     type Output = Self;
 
     fn not(self) -> Self::Output {
-        Self(self.0 ^ 0b0111_1111)
+        self.inverse()
+    }
+}
+
+impl From<Weekday> for WeekdaySet {
+    fn from(weekday: Weekday) -> Self {
+        Self::single(weekday)
+    }
+}
+
+impl Extend<Weekday> for WeekdaySet {
+    fn extend<T: IntoIterator<Item = Weekday>>(&mut self, iter: T) {
+        for weekday in iter {
+            self.insert(weekday);
+        }
     }
 }
 
 impl FromIterator<Weekday> for WeekdaySet {
     fn from_iter<T: IntoIterator<Item = Weekday>>(iter: T) -> Self {
-        iter.into_iter().map(Self::single).fold(Self::EMPTY, Self::union)
+        let mut weekdays = Self::EMPTY;
+        weekdays.extend(iter);
+        weekdays
+    }
+}
+
+impl IntoIterator for WeekdaySet {
+    type Item = Weekday;
+    type IntoIter = WeekdaySetIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+// impl Bit*<Weekday> for WeekdaySet
+impl BitOr<Weekday> for WeekdaySet {
+    type Output = Self;
+
+    fn bitor(self, rhs: Weekday) -> Self::Output {
+        self | Self::from(rhs)
+    }
+}
+
+impl BitAnd<Weekday> for WeekdaySet {
+    type Output = Self;
+
+    fn bitand(self, rhs: Weekday) -> Self::Output {
+        self & Self::from(rhs)
+    }
+}
+
+impl BitXor<Weekday> for WeekdaySet {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Weekday) -> Self::Output {
+        self ^ Self::from(rhs)
+    }
+}
+
+/// Can be used to check the presence of a day in the collection.
+///
+/// # Example
+/// ```
+/// # use chrono::WeekdaySet;
+/// use chrono::Weekday::*;
+/// assert!(WeekdaySet::single(Mon)[Mon]);
+/// assert!(WeekdaySet::ALL[Mon]);
+/// assert!(!WeekdaySet::EMPTY[Mon]);
+/// assert!(!WeekdaySet::single(Tue)[Mon]);
+/// ```
+impl Index<Weekday> for WeekdaySet {
+    type Output = bool;
+
+    fn index(&self, weekday: Weekday) -> &Self::Output {
+        if self.contains(weekday) { &true } else { &false }
+    }
+}
+
+// impl Bit*<WeekdaySet> for Weekday
+impl BitOr<WeekdaySet> for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitor(self, rhs: WeekdaySet) -> Self::Output {
+        WeekdaySet::from(self) | rhs
+    }
+}
+
+impl BitAnd<WeekdaySet> for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitand(self, rhs: WeekdaySet) -> Self::Output {
+        WeekdaySet::from(self) & rhs
+    }
+}
+
+impl BitXor<WeekdaySet> for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitxor(self, rhs: WeekdaySet) -> Self::Output {
+        WeekdaySet::from(self) ^ rhs
+    }
+}
+
+// impl Bit*Assign<Weekday> for WeekdaySet
+impl BitOrAssign<Weekday> for WeekdaySet {
+    fn bitor_assign(&mut self, rhs: Weekday) {
+        *self |= Self::from(rhs);
+    }
+}
+
+impl BitAndAssign<Weekday> for WeekdaySet {
+    fn bitand_assign(&mut self, rhs: Weekday) {
+        *self &= Self::from(rhs);
+    }
+}
+
+impl BitXorAssign<Weekday> for WeekdaySet {
+    fn bitxor_assign(&mut self, rhs: Weekday) {
+        *self ^= Self::from(rhs);
+    }
+}
+
+// impl Bit* for Weekday
+impl BitOr for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        WeekdaySet::from(self) | WeekdaySet::from(rhs)
+    }
+}
+
+impl BitAnd for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        WeekdaySet::from(self) & WeekdaySet::from(rhs)
+    }
+}
+
+impl BitXor for Weekday {
+    type Output = WeekdaySet;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        WeekdaySet::from(self) ^ WeekdaySet::from(rhs)
     }
 }
 
@@ -437,7 +754,7 @@ impl Not for Weekday {
     type Output = WeekdaySet;
 
     fn not(self) -> Self::Output {
-        !WeekdaySet::single(self)
+        !WeekdaySet::from(self)
     }
 }
 
