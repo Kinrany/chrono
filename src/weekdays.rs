@@ -52,13 +52,13 @@ impl WeekdaySet {
     /// ```
     pub const fn single_day(self) -> Option<Weekday> {
         match self {
-            Self(0b000_0001) => Some(Weekday::Mon),
-            Self(0b000_0010) => Some(Weekday::Tue),
-            Self(0b000_0100) => Some(Weekday::Wed),
-            Self(0b000_1000) => Some(Weekday::Thu),
-            Self(0b001_0000) => Some(Weekday::Fri),
-            Self(0b010_0000) => Some(Weekday::Sat),
-            Self(0b100_0000) => Some(Weekday::Sun),
+            Self::MON => Some(Weekday::Mon),
+            Self::TUE => Some(Weekday::Tue),
+            Self::WED => Some(Weekday::Wed),
+            Self::THU => Some(Weekday::Thu),
+            Self::FRI => Some(Weekday::Fri),
+            Self::SAT => Some(Weekday::Sat),
+            Self::SUN => Some(Weekday::Sun),
             _ => None,
         }
     }
@@ -341,15 +341,21 @@ impl WeekdaySet {
     }
 
     /// Create a `WeekdaySet` from a single `Weekday`.
+    ///
+    /// # Example
+    /// ```
+    /// # use chrono::{Weekday, WeekdaySet};
+    /// assert_eq!(WeekdaySet::MON, WeekdaySet::single(Weekday::Mon));
+    /// ```
     pub const fn single(weekday: Weekday) -> Self {
         match weekday {
-            Weekday::Mon => Self(0b000_0001),
-            Weekday::Tue => Self(0b000_0010),
-            Weekday::Wed => Self(0b000_0100),
-            Weekday::Thu => Self(0b000_1000),
-            Weekday::Fri => Self(0b001_0000),
-            Weekday::Sat => Self(0b010_0000),
-            Weekday::Sun => Self(0b100_0000),
+            Weekday::Mon => Self::MON,
+            Weekday::Tue => Self::TUE,
+            Weekday::Wed => Self::WED,
+            Weekday::Thu => Self::THU,
+            Weekday::Fri => Self::FRI,
+            Weekday::Sat => Self::SAT,
+            Weekday::Sun => Self::SUN,
         }
     }
 
@@ -377,6 +383,21 @@ impl WeekdaySet {
     pub const EMPTY: Self = Self(0b000_0000);
     /// A `WeekdaySet` containing all seven `Weekday`s.
     pub const ALL: Self = Self(0b111_1111);
+
+    /// A `WeekdaySet` containing only Monday.
+    pub const MON: Self = Self(0b000_0001);
+    /// A `WeekdaySet` containing only Tuesday.
+    pub const TUE: Self = Self(0b000_0010);
+    /// A `WeekdaySet` containing only Wednesday.
+    pub const WED: Self = Self(0b000_0100);
+    /// A `WeekdaySet` containing only Thursday.
+    pub const THU: Self = Self(0b000_1000);
+    /// A `WeekdaySet` containing only Friday.
+    pub const FRI: Self = Self(0b001_0000);
+    /// A `WeekdaySet` containing only Saturday.
+    pub const SAT: Self = Self(0b010_0000);
+    /// A `WeekdaySet` containing only Sunday.
+    pub const SUN: Self = Self(0b100_0000);
 }
 
 /// Print the underlying bitmask, padded to 7 bits.
